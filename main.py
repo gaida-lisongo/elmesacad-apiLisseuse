@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.uri_parser import parse_uri
 
@@ -85,6 +85,17 @@ app.include_router(author_router)
 app.include_router(admin_router)
 app.include_router(user_router)
 app.include_router(reader_router)
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    """Navigateur : redirection vers la doc interactive OpenAPI."""
+    return RedirectResponse(url="/docs", status_code=302)
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(status_code=204)
 
 
 @app.exception_handler(Exception)

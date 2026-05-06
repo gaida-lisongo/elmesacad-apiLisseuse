@@ -1,5 +1,10 @@
 FROM python:3.12-slim
 
+# Pillow encode WebP via libwebp (PyMuPDF seul n’expose souvent pas tobytes("webp") en slim).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libwebp7 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
