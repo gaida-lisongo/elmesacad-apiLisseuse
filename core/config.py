@@ -16,7 +16,12 @@ class Settings(BaseSettings):
     )
     mongo_db_name: str | None = Field(default=None, alias="MONGO_DB_NAME")
 
-    cloudinary_cloud_name: str = Field(alias="CLOUDINARY_CLOUD_NAME")
+    cloudinary_cloud_name: str = Field(
+        validation_alias=AliasChoices(
+            "CLOUDINARY_CLOUD_NAME",
+            "CLOUDINARY_NAME",
+        ),
+    )
     cloudinary_api_key: str = Field(alias="CLOUDINARY_API_KEY")
     cloudinary_secret_key: str = Field(alias="CLOUDINARY_SECRET_KEY")
     cloudinary_upload_preset: str | None = Field(
