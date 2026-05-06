@@ -72,8 +72,9 @@
       <label for="baseUrl">URL de base de l’API</label>
       <input id="baseUrl" type="url" placeholder="https://api.example.com" />
       <p class="muted">
-        Astuce : ajoutez aussi cette URL exacte dans <code>CORS_EXTRA_ORIGINS</code> si elle n’est
-        pas déjà couverte par <code>CORS_GITHUB_PAGES_ORIGIN</code>.
+        Astuce : renseignez <code>CORS_GITHUB_PAGES_ORIGIN</code> avec l’URL exacte de ce site Pages
+        (ex. https://gaida-lisongo.github.io/elmesacad-apiLisseuse/) dans le backend pour éviter les
+        blocages CORS. Vous pouvez aussi utiliser <code>CORS_EXTRA_ORIGINS</code>.
       </p>
     </section>
 

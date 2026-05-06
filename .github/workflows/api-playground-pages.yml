@@ -1,5 +1,8 @@
-# Déploie la page statique de test (gh-pages-api-playground/) sur GitHub Pages.
-# Si ce dépôt backend est séparé du frontend, pas de conflit avec le workflow Flutter.
+# Déploie le contenu statique depuis docs/ vers GitHub Pages (source « GitHub Actions »).
+#
+# Si vous préférez « Deploy from a branch », ne lancez pas ce workflow :
+# réglages → Pages → Deploy from branch → branche principale → dossier /docs
+# Les fichiers servis sont ceux dans docs/ (dont index.html).
 #
 # Déclenchement : Actions → « API playground (Pages) » → Run workflow.
 
@@ -27,13 +30,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Préparer Pages (nojekyll)
-        run: touch gh-pages-api-playground/.nojekyll
+      - name: Vérifier la racine Pages
+        run: |
+          test -f docs/index.html || (echo 'docs/index.html manquant' && exit 1)
+          test -f docs/.nojekyll || touch docs/.nojekyll
 
       - name: Upload artifact Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: gh-pages-api-playground
+          path: docs
 
       - name: Deploy to GitHub Pages
         id: deployment

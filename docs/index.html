@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Liseuse ELMES — API playground</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+        line-height: 1.45;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 52rem;
+        padding: 1.25rem;
+      }
+      label {
+        display: block;
+        margin-top: 0.75rem;
+        font-weight: 600;
+      }
+      input,
+      textarea,
+      button {
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 0.35rem;
+        padding: 0.45rem 0.55rem;
+      }
+      textarea {
+        min-height: 8rem;
+        font-family: ui-monospace, monospace;
+      }
+      section {
+        border: 1px solid color-mix(in oklab, CanvasText 22%, transparent);
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 1rem 0;
+      }
+      .row {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 720px) {
+        .row.two {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      pre {
+        overflow: auto;
+        padding: 0.75rem;
+        border-radius: 8px;
+        background: color-mix(in oklab, Canvas 92%, CanvasText);
+      }
+      .muted {
+        opacity: 0.85;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Playground API Liseuse ELMES</h1>
+    <p class="muted">
+      Indiquez l’URL de votre API déployée (Cloud Run, Fly.io, Render, VPS avec Docker, etc.).
+      GitHub Pages ne peut pas héberger FastAPI : cette page est uniquement une coquille de test
+      (requêtes <code>fetch</code> depuis le navigateur).
+    </p>
+
+    <section>
+      <label for="baseUrl">URL de base de l’API</label>
+      <input id="baseUrl" type="url" placeholder="https://api.example.com" />
+      <p class="muted">
+        Astuce : renseignez <code>CORS_GITHUB_PAGES_ORIGIN</code> avec l’URL exacte de ce site Pages
+        (ex. https://gaida-lisongo.github.io/elmesacad-apiLisseuse/) dans le backend pour éviter les
+        blocages CORS. Vous pouvez aussi utiliser <code>CORS_EXTRA_ORIGINS</code>.
+      </p>
+    </section>
+
+    <section>
+      <h2>État</h2>
+      <pre id="out">{}</pre>
+    </section>
+
+    <section>
+      <h2>POST /author/upload-pdf</h2>
+      <div class="row two">
+        <div>
+          <label for="pdfRef">reference</label>
+          <input id="pdfRef" type="text" placeholder="mon-livre-001" />
+        </div>
+        <div>
+          <label for="pdfFile">PDF</label>
+          <input id="pdfFile" type="file" accept="application/pdf" />
+        </div>
+      </div>
+      <button id="btnPdf" type="button">Envoyer</button>
+    </section>
+
+    <section>
+      <h2>PUT /author/create-document</h2>
+      <p class="muted">Corps JSON (schéma Document, les URLs des pages sont recalculées côté serveur).</p>
+      <textarea id="docJson"></textarea>
+      <button id="btnDoc" type="button">Créer</button>
+    </section>
+
+    <section>
+      <h2>POST /admin/users</h2>
+      <textarea id="adminUserJson">{
+  "matricule": "M123",
+  "mail": "user@example.com",
+  "credits": 50
+}</textarea>
+      <button id="btnAdminUser" type="button">Créer utilisateur</button>
+    </section>
+
+    <section>
+      <h2>PATCH /admin/categories</h2>
+      <textarea id="categoriesJson">[
+  { "reference": "CAT-1", "designation": "Roman", "tags": ["fiction"] }
+]</textarea>
+      <button id="btnCategories" type="button">Upsert catégories</button>
+    </section>
+
+    <section>
+      <h2>PUT /user/recharge</h2>
+      <textarea id="rechargeJson">{
+  "userId": "<mongo_user_id>",
+  "recharge": {
+    "status": "paid",
+    "credits": 10,
+    "orderNumber": "ORD-1001"
+  }
+}</textarea>
+      <button id="btnRecharge" type="button">Recharger</button>
+    </section>
+
+    <section>
+      <h2>PATCH /reader/update-progress</h2>
+      <textarea id="progressJson">{
+  "userId": "<mongo_user_id>",
+  "documentId": "<mongo_document_id>",
+  "newPage": 3
+}</textarea>
+      <button id="btnProgress" type="button">Mettre à jour</button>
+    </section>
+
+    <script>
+      const out = document.getElementById("out");
+      const baseUrlInput = document.getElementById("baseUrl");
+
+      function loadSettings() {
+        const saved = localStorage.getItem("elmes_api_base_url") || "";
+        baseUrlInput.value = saved;
+      }
+
+      function saveSettings() {
+        localStorage.setItem("elmes_api_base_url", baseUrlInput.value.trim());
+      }
+
+      baseUrlInput.addEventListener("change", saveSettings);
+
+      function base() {
+        const v = baseUrlInput.value.trim().replace(/\/+$/, "");
+        if (!v) throw new Error("Renseignez l’URL de base de l’API.");
+        return v;
+      }
+
+      async function req(method, path, body, isMultipart) {
+        saveSettings();
+        const url = `${base()}${path}`;
+        const opts = { method };
+        if (isMultipart) {
+          opts.body = body;
+        } else if (body !== undefined) {
+          opts.headers = { "Content-Type": "application/json" };
+          opts.body = JSON.stringify(body);
+        }
+        const res = await fetch(url, opts);
+        const text = await res.text();
+        let parsed;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          parsed = text;
+        }
+        return { ok: res.ok, status: res.status, url, parsed };
+      }
+
+      function render(obj) {
+        out.textContent = JSON.stringify(obj, null, 2);
+      }
+
+      document.getElementById("btnPdf").onclick = async () => {
+        try {
+          const reference = document.getElementById("pdfRef").value.trim();
+          const fileInput = document.getElementById("pdfFile");
+          if (!reference) throw new Error("reference obligatoire.");
+          if (!fileInput.files || fileInput.files.length === 0)
+            throw new Error("Choisissez un fichier PDF.");
+
+          const fd = new FormData();
+          fd.append("reference", reference);
+          fd.append("file", fileInput.files[0]);
+
+          render(await req("POST", "/author/upload-pdf", fd, true));
+        } catch (e) {
+          render({ error: String(e) });
+        }
+      };
+
+      document.getElementById("btnDoc").onclick = async () => {
+        try {
+          const raw = document.getElementById("docJson").value;
+          const body = JSON.parse(raw);
+          render(await req("PUT", "/author/create-document", body, false));
+        } catch (e) {
+          render({ error: String(e) });
+        }
+      };
+
+      document.getElementById("btnAdminUser").onclick = async () => {
+        try {
+          const raw = document.getElementById("adminUserJson").value;
+          const body = JSON.parse(raw);
+          render(await req("POST", "/admin/users", body, false));
+        } catch (e) {
+          render({ error: String(e) });
+        }
+      };
+
+      document.getElementById("btnCategories").onclick = async () => {
+        try {
+          const raw = document.getElementById("categoriesJson").value;
+          const body = JSON.parse(raw);
+          render(await req("PATCH", "/admin/categories", body, false));
+        } catch (e) {
+          render({ error: String(e) });
+        }
+      };
+
+      document.getElementById("btnRecharge").onclick = async () => {
+        try {
+          const raw = document.getElementById("rechargeJson").value;
+          const body = JSON.parse(raw);
+          render(await req("PUT", "/user/recharge", body, false));
+        } catch (e) {
+          render({ error: String(e) });
+        }
+      };
+
+      document.getElementById("btnProgress").onclick = async () => {
+        try {
+          const raw = document.getElementById("progressJson").value;
+          const body = JSON.parse(raw);
+          render(await req("PATCH", "/reader/update-progress", body, false));
+        } catch (e) {
+          render({ error: String(e) });
+        }
+      };
+
+      document.getElementById("docJson").value = JSON.stringify(
+        {
+          reference: "mon-livre-001",
+          categorie: "CAT-1",
+          author: {
+            name: "Auteur Test",
+            photo: null,
+            email: "auteur@example.com",
+            descriontion: [{ title: "Bio", content: ["Ligne 1", "Ligne 2"] }],
+          },
+          userId: "<mongo_user_id>",
+          total_pages: 12,
+          title: "Mon titre",
+          description: [{ title: "Résumé", content: ["Court résumé"] }],
+          pages: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      );
+
+      loadSettings();
+    </script>
+  </body>
+</html>
