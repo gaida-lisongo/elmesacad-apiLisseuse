@@ -11,6 +11,7 @@ from core.config import Settings, get_settings
 from utils.cloudinary_media import configure_cloudinary
 
 from routes.admin import router as admin_router
+from routes.auth import router as auth_router
 from routes.author import router as author_router
 from routes.reader import router as reader_router
 from routes.user_route import router as user_router
@@ -81,6 +82,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
 app.include_router(author_router)
 app.include_router(admin_router)
 app.include_router(user_router)

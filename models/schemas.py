@@ -40,6 +40,12 @@ class UserCreate(BaseModel):
     credits: float = 0
 
 
+class MatriculeAuthBody(BaseModel):
+    """Connexion par matricule : renvoie l’utilisateur, ses documents et les catégories liées."""
+
+    matricule: str
+
+
 class AuthorBioSection(BaseModel):
     title: str
     content: list[str]
