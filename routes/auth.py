@@ -35,31 +35,48 @@ async def auth_by_matricule(db: DbDep, body: MatriculeAuthBody) -> dict:
     user_out = _serialize_user(user)
     user_id = user_out["_id"]
 
-    documents_raw = await db.documents.find({"userId": user_id}).sort(
-        "updatedAt",
-        -1,
-    ).to_list(length=10_000)
-
-    documents = [stringify_ids(d) for d in documents_raw]
-
-    category_refs: list[str] = []
-    seen: set[str] = set()
-    for d in documents_raw:
-        ref = d.get("categorie")
-        if isinstance(ref, str) and ref and ref not in seen:
-            seen.add(ref)
-            category_refs.append(ref)
+    categories_raw = await db.categories.aggregate([
+        {
+            "$lookup": {
+                "from": "documents",
+                "let": {"reference": "$reference"},
+                "pipeline": [
+                    {
+                        "$match": {
+                            "$expr": {
+                                "$and": [
+                                    {"$eq": ["$categorie", "$$reference"]},
+                                    {"$eq": ["$userId", user_id]},
+                                ]
+                            }
+                        }
+                    },
+                    {"$sort": {"updatedAt": -1}},
+                ],
+                "as": "documents",
+            }
+        },
+        {"$match": {"documents": {"$ne": []}}},
+        {
+            "$project": {
+                "_id": 1,
+                "reference": 1,
+                "designation": 1,
+                "tags": 1,
+                "documents": 1,
+            }
+        },
+        {"$sort": {"documents.0.updatedAt": -1}},
+    ]).to_list(length=500)
 
     categories_out: list[dict] = []
-    if category_refs:
-        categories_raw = await db.categories.find(
-            {"reference": {"$in": category_refs}},
-        ).to_list(length=500)
-        by_ref = {c["reference"]: stringify_ids(c) for c in categories_raw}
-        categories_out = [by_ref[r] for r in category_refs if r in by_ref]
+    if categories_raw:
+        for category in categories_raw:
+            serialized_category = stringify_ids(category)
+            serialized_category["documents"] = [stringify_ids(d) for d in serialized_category.get("documents", [])]
+            categories_out.append(serialized_category)
 
     return {
         "user": user_out,
-        "documents": documents,
         "categories": categories_out,
     }
